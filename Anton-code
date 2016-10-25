@@ -1,0 +1,102 @@
+#include <PS2X_lib.h>
+#include <Servo.h>
+// PS2 PIN SETTINGS
+int CLK_PIN = 13;
+int CMD_PIN = 11;
+int ATN_PIN = 12;
+int DAT_PIN = 10;
+Servo myservo;
+float power;
+bool PRESS_ON = true;
+bool RMBLE_ON = true;
+
+// MOTOR + SERVO PIN MAPPINGS
+int MTR_PIN_1 = 3;
+int MTR_PIN_2 = 5;
+float servo_loc;
+
+// Communication details
+int SERIAL_RATE = 9600;
+int PS2X_TYPE = 0;
+
+// PS2X controller instances
+PS2X ps2x;
+
+void setup() {
+  power = 0;
+  servo_loc = 90;
+  // Rate at which serial will monitor
+  Serial.begin(SERIAL_RATE);
+
+  // Attempt configuration and shit
+  int error = ps2x.config_gamepad(CLK_PIN, CMD_PIN, ATN_PIN, DAT_PIN, PRESS_ON, RMBLE_ON);
+
+  if (error == 1 || error == 2) {
+    Serial.println("BITCH YOU FUCKING BRICKED THE CONTROLLER");
+    Serial.flush();
+    exit(0);
+  }
+
+  if (PS2X_TYPE == 1) {
+    Serial.println("DualShock controller found");
+  } else if (PS2X_TYPE == 2) {
+    Serial.println("Bitch this ain't Guitar Hero");
+    exit(0);
+  } else {
+    Serial.println("Unknown contorller type");
+  }
+  myservo.attach(6);
+  // Setup the motors.
+  pinMode(MTR_PIN_1, OUTPUT);
+  pinMode(MTR_PIN_2, OUTPUT);
+  analogWrite(MTR_PIN_1, power);
+  analogWrite(MTR_PIN_2,power);
+  
+}
+
+void loop() {
+   int r_x = ps2x.Analog(PSS_RX);
+  servo_loc = ((.18*(r_x-128))+90);
+
+  myservo.write(servo_loc);
+  // Some, uh, vibrating and shit.
+  ps2x.read_gamepad(false, RMBLE_ON);
+
+  // Driving
+  int L_X = ps2x.Analog(PSS_LX);
+  int L_Y = ps2x.Analog(PSS_LY);
+
+  // Steering
+  int R_X = ps2x.Analog(PSS_RX);
+  int R_Y = ps2x.Analog(PSS_RY);
+
+  Serial.print("LX: [");
+  Serial.print(L_X);
+  Serial.print("] L_Y: [");
+  Serial.print(L_Y);
+  Serial.print("] RX: [");
+  Serial.print(R_X);
+  Serial.print("] R_Y: [");
+  Serial.print(R_Y);
+  Serial.println("]");
+  
+  
+  if(ps2x.Button(PSB_L1))
+  {
+    power = 255/2;
+    analogWrite(MTR_PIN_1, power);
+    analogWrite(MTR_PIN_2,power);
+  }
+
+  else if(ps2x.Button(PSB_L2))
+  { power = 255;
+    analogWrite(MTR_PIN_1, power);
+    analogWrite(MTR_PIN_2,power);
+  }
+  else{ power = 0;
+    analogWrite(MTR_PIN_1, power);
+    analogWrite(MTR_PIN_2,power);
+  }
+delay(50);
+  
+}
